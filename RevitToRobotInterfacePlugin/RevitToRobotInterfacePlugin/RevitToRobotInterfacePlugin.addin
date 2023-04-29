@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>Application RevitToRobotInterfacePlugin</Name>
+    <Assembly>RevitToRobotInterfacePlugin.dll</Assembly>
+    <FullClassName>RevitToRobotInterfacePlugin.App</FullClassName>
+    <ClientId>e4ab247c-3541-405b-8fa3-6fb1f09bdc3d</ClientId>
+    <VendorId>lsbudisso23</VendorId>
+    <VendorDescription>https://github.com/lsbudisso23</VendorDescription>
+  </AddIn>
+</RevitAddIns>
