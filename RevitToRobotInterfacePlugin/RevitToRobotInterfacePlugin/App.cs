@@ -29,18 +29,19 @@ namespace RevitToRobotInterfacePlugin
                     {
                         tx.Start("Posting command from Handler");
 
-                        // create instance of DirectRevitAccess
-                        // this part of the API is undocument but was found by analysing the journal
-                        // entries upon manual invocation as well as through the helpful blog post:
+                        // create instance of RevitToRobotCmd
+                        // this class was found by decompiling the DirectRevitAccess.Execute() method
+                        // that was previously identified analysing the journalentries upon manual
+                        // invocation as well as through the helpful blog post:
                         // https://forums.autodesk.com/t5/revit-api-forum/calling-robot-structural-analysis-using-revit-api/m-p/5973473#M13549
-                        REX.DRevit2Robot.DirectRevitAccess dra = new REX.DRevit2Robot.DirectRevitAccess();
+                        var r2r = new REX.DRevit2Robot.RevitToRobotCmd();
 
                         // invoke the execute method of this command, providing the 'saved' command data,
                         // message, and elements
-                        Result r = dra.Execute(Command.CommandData, ref Command.Message, Command.Elements);
+                        Result r = r2r.Execute(Command.CommandData, ref Command.Message, Command.Elements);
 
                         // print the result to the debug output
-                        Debug.Print($"Result of REX.DRevit2Robot.DirectRevitAccess.Execute() is {r}");
+                        Debug.Print($"Result of REX.DRevit2Robot.RevitToRobotCmd.Execute() is {r}");
 
                         // complete the transaction
                         tx.Commit();
