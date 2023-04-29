@@ -1,21 +1,238 @@
 #region Namespaces
-using Autodesk.Revit.ApplicationServices;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using Autodesk.REX.Framework;
+using REX.DRevit2Robot.REX.Common;
+using REX.DRevit2Robot;
 using System;
 using System.Diagnostics;
+using System.IO;
+using System.Reflection;
 #endregion
+
 
 namespace RevitToRobotInterfacePlugin
 {
     internal class App : IExternalApplication
     {
+        // to access the internal sealed classes, the assembly of one of the public classes (RevitToRobotCmd) is retrieved
+        private System.Reflection.Assembly Assem = typeof(RevitToRobotCmd).Assembly;
+
+        private void EvilRevitAppActivate()
+        {
+            // get instance of internal sealed class RevitUtil via system reflection
+            Type typeInfo = Assem.GetType("REX.DRevit2Robot.RevitUtl");
+
+            // get and invoke method RevitAppActivate
+            // null x2 as no object (static) and no parameters
+            MethodInfo method = Type.GetType(typeInfo.AssemblyQualifiedName).GetMethod("RevitAppActivate");
+            method.Invoke(null, null);
+        }
+
+        private void EvilPrepareToExecution(ref RevitToRobotCmd revitToRobotCmd)
+        {
+            // get instance of internal sealed class RevitToRobotCmd via system reflection
+            Type typeInfo = Assem.GetType("REX.DRevit2Robot.RevitToRobotCmd");
+
+            // get and invoke method RevitAppActivate
+            // null x2 as no object (static) and no parameters
+            MethodInfo method = Type.GetType(typeInfo.AssemblyQualifiedName).GetMethod("PrepareToExecution", BindingFlags.NonPublic | BindingFlags.Instance);
+            method.Invoke(revitToRobotCmd, null);
+        }
+        private void EvilInitRevitContext()
+        {
+            // get instance of internal sealed class RevitToRobotCmd via system reflection
+            Type typeInfo = Assem.GetType("REX.DRevit2Robot.Revit2Robot");
+
+            // get and invoke method RevitAppActivate
+            // null x2 as no object (static) and no parameters
+            MethodInfo method = Type.GetType(typeInfo.AssemblyQualifiedName).GetMethod("InitRevitContext");
+            method.Invoke(null, null);
+        }
+
+        private void EvilTheCommonOptions_FromParams()
+        {
+            // get instance of internal sealed class RevitToRobotCmd via system reflection
+            Type typeInfo = Assem.GetType("REX.DRevit2Robot.Revit2Robot");
+
+            // get the TheCommonOptions parameter of Revit2Robot class
+            FieldInfo field = typeInfo.GetField("TheCommonOptions", BindingFlags.Public | BindingFlags.Static);
+
+            // get the instance of the TheCommonOptions in use by Revit2Robot
+            clCommonOptions obj = (clCommonOptions)field.GetValue(null);
+
+            // call the FromParams method
+            obj.FromParams();
+        }
+
+        private void EvilTheSendOptions_FromParams()
+        {
+            // get instance of internal sealed class RevitToRobotCmd via system reflection
+            Type typeInfo = Assem.GetType("REX.DRevit2Robot.Revit2Robot");
+
+            // get the TheSendOptions parameter of Revit2Robot class
+            FieldInfo field = typeInfo.GetField("TheSendOptions", BindingFlags.Public | BindingFlags.Static);
+
+            // get the instance of the TheSendOptions in use by Revit2Robot
+            clSendOptions obj = (clSendOptions)field.GetValue(null);
+
+            // call the FromParams method
+            obj.FromParams();
+        }
+
+        private void EvilUpdateOptions_FromParams()
+        {
+            // get instance of internal sealed class RevitToRobotCmd via system reflection
+            Type typeInfo = Assem.GetType("REX.DRevit2Robot.Revit2Robot");
+
+            // get the TheUpdateOptions parameter of Revit2Robot class
+            FieldInfo field = typeInfo.GetField("TheUpdateOptions", BindingFlags.Public | BindingFlags.Static);
+
+            // get the instance of the TheUpdateOptions in use by Revit2Robot
+            clUpdateOptions obj = (clUpdateOptions)field.GetValue(null);
+
+            // call the FromParams method
+            obj.FromParams();
+        }
+
+        private void EvilTheRevitJournal_SetUserInteraction(bool status)
+        {
+            // get instance of internal sealed class RevitToRobotCmd via system reflection
+            Type typeInfo = Assem.GetType("REX.DRevit2Robot.Revit2Robot");
+
+            // get the TheRevitJournal parameter of Revit2Robot class
+            FieldInfo field = typeInfo.GetField("TheRevitJournal", BindingFlags.Public | BindingFlags.Static);
+
+            clRevitJournal obj = (clRevitJournal)field.GetValue(null);
+
+            field = obj.GetType().GetField("m_userInteraction", BindingFlags.NonPublic | BindingFlags.Instance);
+            field.SetValue(obj, status);
+        }
+
+        private Result EvilExportToRobot(ExternalCommandData commandData, ref string message, ElementSet elements)
+        {
+            Result result;
+
+            // the general structure of operations following here adheres tp the decompile code for
+            // the Robot & REX, stripped down top remove logging, etc... for simplicity
+
+            try
+            {
+                REX.DRevit2Robot.Application AppRef = new REX.DRevit2Robot.Application();
+                REXContext rexContext = new REXRevitContext().Get("2022", commandData.Application.Application.VersionName, commandData.Application.Application.Language, commandData, ref message, elements);
+                rexContext.Control.Mode = REXMode.Dialog;
+                rexContext.Control.ControlMode = REXControlMode.ModalDialog;
+                rexContext.Control.Parent = (object)null;
+                rexContext.Product.Type = REXInterfaceType.Revit;
+                REXEnvironment rexEnvironment = new REXEnvironment("2022");
+                if (rexEnvironment.LoadEngine(ref rexContext))
+                {
+                    if (AppRef.Create(ref rexContext))
+                    {
+                        string location = Assembly.GetExecutingAssembly().Location;
+                        string withoutExtension = Path.GetFileNameWithoutExtension(location);
+                        string fullName = Directory.GetParent(location).FullName;
+                        if (rexEnvironment != null & Directory.Exists(fullName))
+                        {
+                            rexEnvironment.RegisterInternalModuleName(withoutExtension);
+                            rexEnvironment.RegisterModulePath(withoutExtension, fullName);
+                        }
+
+                        // this is evil
+                        // this is a violation of the Revit/Robot developer intentions, they are perfectly at liberty to change or remove internal classes between releases 
+                        // this is an internal sealed class that is not meant to be publicly available
+                        // this was achieved by using a .NET decompiler and System.Reflection
+                        Type typeInfo = Assem.GetType("REX.DRevit2Robot.Revit2Robot");
+
+                        REX.DRevit2Robot.REX.Common.Engine.Support.REXAssemblies rexAssem = new REX.DRevit2Robot.REX.Common.Engine.Support.REXAssemblies();
+                        rexAssem.Initialize();
+
+                        // get and invoke InitRevitContext
+                        // null x2 as no object (static) and no parameters for Revit2Robot
+                        EvilInitRevitContext();
+
+                        // set the Revit2Robot class static variable m_resultMessage
+                        FieldInfo field = typeInfo.GetField("m_resultMessage", BindingFlags.Public | BindingFlags.Static);
+                        field.SetValue(null, "");
+
+                        // set the Revit2Robot class static variable m_result
+                        field = typeInfo.GetField("m_result", BindingFlags.Public | BindingFlags.Static);
+                        field.SetValue(null, Result.Succeeded);
+
+                        // set the Revit2Robot class static variable TheLogger
+                        field = typeInfo.GetField("TheLogger", BindingFlags.Public | BindingFlags.Static);
+                        field.SetValue(null, new REXLogger());
+
+                        // set the Revit2Robot class static variable TheCommonOptions
+                        field = typeInfo.GetField("TheCommonOptions", BindingFlags.Public | BindingFlags.Static);
+                        field.SetValue(null, new clCommonOptions());
+
+                        // set the Revit2Robot class static variable TheSendOptions
+                        field = typeInfo.GetField("TheSendOptions", BindingFlags.Public | BindingFlags.Static);
+                        field.SetValue(null, new clSendOptions());
+
+                        // set the Revit2Robot class static variable TheUpdateOptions
+                        field = typeInfo.GetField("TheUpdateOptions", BindingFlags.Public | BindingFlags.Static);
+                        field.SetValue(null, new clUpdateOptions());
+
+                        // get and invoke SetRevitDocument
+                        // null as no object (static), passing commandData
+                        MethodInfo method = Type.GetType(typeInfo.AssemblyQualifiedName).GetMethod("SetRevitDocument");
+                        method.Invoke(null, new[] { commandData });
+
+                        // EvilPrepareToExecution requres an instance to operate on as it is a non static method,
+                        // however it does not appear that the instance actually matters from the decompiled code
+                        // as only static variables are updated i.e. it could have been static, but happens to not be
+                        // This means that an instance must be created, despite being useless and operated on
+                        RevitToRobotCmd revitToRobotCmd = new RevitToRobotCmd();
+                        EvilPrepareToExecution(ref revitToRobotCmd);
+                        EvilTheCommonOptions_FromParams();
+                        EvilTheSendOptions_FromParams();
+                        EvilUpdateOptions_FromParams();
+
+                        // get the TheCommonOptions parameter of Revit2Robot class
+                        field = typeInfo.GetField("TheCommonOptions", BindingFlags.Public | BindingFlags.Static);
+
+                        // get the instance of the TheCommonOptions in use by Revit2Robot
+                        clCommonOptions obj = (clCommonOptions)field.GetValue(null);
+
+                        field = typeInfo.GetField("TheFilePath", BindingFlags.Public | BindingFlags.Static);
+                        field.SetValue(null, obj.SilentModeFileName);
+
+                        // SendToRobot is the method underneath all others that actually does the sending to robot
+                        SendToRobot s2r = new SendToRobot(false);
+                        EvilTheRevitJournal_SetUserInteraction(false);
+                        s2r.Execute(commandData, ref message, elements);
+                        EvilTheRevitJournal_SetUserInteraction(true);
+                        EvilRevitAppActivate();
+
+                        result = rexContext.Extension.Result != REXResultType.Cancelled ? (rexContext.Extension.Result != REXResultType.Failed ? Result.Succeeded : Result.Failed) : Result.Cancelled;
+                    }
+                    else
+                    {
+                        result = Result.Failed;
+                    }
+                }
+                else
+                {
+                    result = Result.Failed;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.Print(ex.Message);
+                result = Result.Failed;
+            }
+
+            return result;
+        }
+
         private void Handler(object sender, EventArgs args)
         {
             // setup the top level objects in the Revit Platform API are application and document.
-            UIApplication uiapp = new UIApplication((Application)sender);
+            UIApplication uiapp = new UIApplication((Autodesk.Revit.ApplicationServices.Application)sender);
             UIDocument uidoc = uiapp.ActiveUIDocument;
-            Application app = uiapp.Application;
+            Autodesk.Revit.ApplicationServices.Application app = uiapp.Application;
             Document doc = uidoc.Document;
 
             try
@@ -29,19 +246,15 @@ namespace RevitToRobotInterfacePlugin
                     {
                         tx.Start("Posting command from Handler");
 
-                        // create instance of RevitToRobotCmd
-                        // this class was found by decompiling the DirectRevitAccess.Execute() method
-                        // that was previously identified analysing the journalentries upon manual
-                        // invocation as well as through the helpful blog post:
-                        // https://forums.autodesk.com/t5/revit-api-forum/calling-robot-structural-analysis-using-revit-api/m-p/5973473#M13549
-                        var r2r = new REX.DRevit2Robot.RevitToRobotCmd();
+                        // todo needs check that robot is running otherwise export will fail and the user will get a
+                        // dialog stating that there is an error and to contact the plugin provider (me!)
+                        // ...
 
-                        // invoke the execute method of this command, providing the 'saved' command data,
-                        // message, and elements
-                        Result r = r2r.Execute(Command.CommandData, ref Command.Message, Command.Elements);
+                        // export to robot
+                        Result r = EvilExportToRobot(Command.CommandData, ref Command.Message, Command.Elements);
 
                         // print the result to the debug output
-                        Debug.Print($"Result of REX.DRevit2Robot.RevitToRobotCmd.Execute() is {r}");
+                        Debug.Print($"Result of MyExportToRobot is {r}");
 
                         // complete the transaction
                         tx.Commit();
