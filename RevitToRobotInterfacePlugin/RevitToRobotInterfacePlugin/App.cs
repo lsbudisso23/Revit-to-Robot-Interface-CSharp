@@ -20,57 +20,32 @@ namespace RevitToRobotInterfacePlugin
 
             try
             {
-                // start transaction on active document
-                using (Transaction tx = new Transaction(doc))
+                // if the addin has been enabled (Add-ins -> External Tools -> Command RevitToRobotInterfacePlugin button pressed
+                // by the user in active revit session/document)
+                if (Command.Enabled)
                 {
-                    tx.Start("Posting command from Handler");
+                    // start transaction on active document
+                    using (Transaction tx = new Transaction(doc))
+                    {
+                        tx.Start("Posting command from Handler");
 
-                    // get revit cmd id for robot structural analysis 
-                    // this command string is obtained upon issuing the command manually (via the gui) in revit
-                    // and observing the external command printed in the journal file for the active session
-                    // (C:\Users\<username>\AppData\Local\Autodesk\Revit\Autodesk Revit 2022\Journals) as stated in
-                    // https://help.autodesk.com/view/RVT/2022/ENU/?guid=Revit_API_Revit_API_Developers_Guide_Advanced_Topics_Commands_html
-                    // The journal entry is as follows:
-                    //   ' [Jrn.Tooltip] Rvt.Attr.Tooltip.CommandID: CustomCtrl_%CustomCtrl_%CustomCtrl_%Analyze%Structural Analysis%AnalysisAndCodeCheck%RobotStructuralAnalysisLink Rvt.Attr.Tooltip.ElapsedTime: 0.1351142 Rvt.Attr.Tooltip.Enabled: True Rvt.Attr.Tooltip.IsFirst: True Rvt.Attr.Tooltip.Key: CustomCtrl_%CustomCtrl_%CustomCtrl_%Analyze%Structural Analysis%AnalysisAndCodeCheck%RobotStructuralAnalysisLink Rvt.Attr.Tooltip.Progressive: True Rvt.Attr.Tooltip.Progressive.Delay: 2 
-                    //   'E 28-Feb-2023 20:46:47.151;   0:< 
-                    //   Jrn.RibbonEvent "Execute external command:CustomCtrl_%CustomCtrl_%CustomCtrl_%Analyze%Structural Analysis%AnalysisAndCodeCheck%RobotStructuralAnalysisLink:REX.DRevit2Robot.DirectRevitAccess" 
-                    string s = "CustomCtrl_%CustomCtrl_%CustomCtrl_%Analyze%Structural Analysis%AnalysisAndCodeCheck%RobotStructuralAnalysisLink";
-                    RevitCommandId cmd = RevitCommandId.LookupCommandId(s);
+                        // create instance of DirectRevitAccess
+                        // this part of the API is undocument but was found by analysing the journal
+                        // entries upon manual invocation as well as through the helpful blog post:
+                        // https://forums.autodesk.com/t5/revit-api-forum/calling-robot-structural-analysis-using-revit-api/m-p/5973473#M13549
+                        REX.DRevit2Robot.DirectRevitAccess dra = new REX.DRevit2Robot.DirectRevitAccess();
 
-                    // fixme
-                    // unfortunately this does not work as intended
-                    // no exceptions are caused, and the cmd id for this string is successfully resolved (not null),
-                    // however upon investigation, revit does not appear to understand this command as the following 
-                    // entry is written to the current journal:
-                    //   'C 01-Mar-2023 15:25:19.693;  DBG_INFO: CustomCtrl_%CustomCtrl_%CustomCtrl_%Analyze%Structural Analysis%AnalysisAndCodeCheck%RobotStructuralAnalysisLinkdoes not exist.: line 894 of E:\Ship\2022_px64\Source\API\RevitAPIUI\Objects\APIUIApplicationHandwritten.cpp. 
-                    // likewise with the python version, using PostCommand appears to be a dead end...
+                        // invoke the execute method of this command, providing the 'saved' command data,
+                        // message, and elements
+                        Result r = dra.Execute(Command.CommandData, ref Command.Message, Command.Elements);
 
+                        // print the result to the debug output
+                        Debug.Print($"Result of REX.DRevit2Robot.DirectRevitAccess.Execute() is {r}");
 
-                    // post the robot structural analysis command
-                    uiapp.PostCommand(cmd);
-
-                    // complete the transaction
-                    tx.Commit();
+                        // complete the transaction
+                        tx.Commit();
+                    }
                 }
-            }
-            // handle specific exceptions that can be raised via PostCommand
-            // as stated, PostCommand does not return anything useful, but may raise exceptions
-            // these exceptions is unhandled are simply ignored, so they are caught and printed
-            // to the user for debugging
-            catch (Autodesk.Revit.Exceptions.ArgumentNullException ex)
-            {
-                Debug.Print($"error: Handler() RevitCommandId for Robot Structural Analysis could not be determined");
-                Debug.Print(ex.Message);
-            }
-            catch (Autodesk.Revit.Exceptions.ArgumentException ex)
-            {
-                Debug.Print($"error: Handler() RevitCommandId for Robot Structural Analysis could not be posted");
-                Debug.Print(ex.Message);
-            }
-            catch (Autodesk.Revit.Exceptions.InvalidOperationException ex)
-            {
-                Debug.Print($"error: Handler() RevitCommandId for Robot Structural Analysis could not be posted. This is likely as a result of multiple commands being posted (is the same event posting multiple commands?");
-                Debug.Print(ex.Message);
             }
             // handle any other exception by printing to the debug console
             catch (Exception ex)

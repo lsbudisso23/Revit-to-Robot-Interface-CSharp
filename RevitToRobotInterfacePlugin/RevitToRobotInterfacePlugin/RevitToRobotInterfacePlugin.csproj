@@ -40,6 +40,14 @@
     <StartProgram>$(ProgramW6432)\Autodesk\Revit 2022\Revit.exe</StartProgram>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Autodesk.REX.Framework, Version=2022.0.0.0, Culture=neutral, PublicKeyToken=51e16e3b26b42eda, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(PROGRAMFILES)\Common Files\Autodesk Shared\Extensions 2022\Framework\Engine\AssemblyCache\Autodesk.REX.Framework.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="DRevit2Robot">
+      <HintPath>$(PROGRAMFILES)\Common Files\Autodesk Shared\Extensions 2022\Modules\RSA\DRevit2Robot\DRevit2Robot.dll</HintPath>
+    </Reference>
     <Reference Include="RevitAPI">
       <HintPath>$(PROGRAMFILES)\Autodesk\Revit 2022\RevitAPI.dll</HintPath>
       <Private>False</Private>
@@ -52,11 +60,18 @@
       <HintPath>$(PROGRAMFILES)\Autodesk\Revit 2022\AddIns\DynamoForRevit\Revit\RevitServices.dll</HintPath>
       <Private>False</Private>
     </Reference>
-
+    <Reference Include="SMX.Core">
+      <HintPath>$(PROGRAMFILES)\Common Files\Autodesk Shared\Structural\SMX\2022\SMX.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="SMX.RST">
+      <HintPath>$(PROGRAMFILES)\Common Files\Autodesk Shared\Structural\SMX\2022\SMX.RST.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
+
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App.cs" />
+    <Compile Include="Command.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -64,7 +79,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-	<PostBuildEvent>if exist "$(AppData)\Autodesk\Revit\Addins\2022" copy "$(ProjectDir)*.addin" "$(AppData)\Autodesk\Revit\Addins\2022"
+    <PostBuildEvent>if exist "$(AppData)\Autodesk\Revit\Addins\2022" copy "$(ProjectDir)*.addin" "$(AppData)\Autodesk\Revit\Addins\2022"
 if exist "$(AppData)\Autodesk\Revit\Addins\2022" copy "$(ProjectDir)$(OutputPath)*.dll" "$(AppData)\Autodesk\Revit\Addins\2022"</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
