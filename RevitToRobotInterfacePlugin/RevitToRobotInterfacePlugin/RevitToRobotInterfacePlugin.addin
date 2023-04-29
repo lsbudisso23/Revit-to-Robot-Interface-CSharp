@@ -8,13 +8,4 @@
     <VendorId>lsbudisso23</VendorId>
     <VendorDescription>https://github.com/lsbudisso23</VendorDescription>
   </AddIn>
-  <AddIn Type="Command">
-    <Text>Command RevitToRobotInterfacePlugin</Text>
-    <Description>RevitToRobotInterfacePlugin</Description>
-    <Assembly>RevitToRobotInterfacePlugin.dll</Assembly>
-    <FullClassName>RevitToRobotInterfacePlugin.Command</FullClassName>
-    <ClientId>e5c20396-7ca0-4620-a2ce-62f980eb36c7</ClientId>
-	<VendorId>lsbudisso23</VendorId>
-	<VendorDescription>https://github.com/lsbudisso23</VendorDescription>
-  </AddIn>
 </RevitAddIns>

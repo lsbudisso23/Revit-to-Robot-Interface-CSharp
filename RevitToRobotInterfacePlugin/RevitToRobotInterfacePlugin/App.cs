@@ -8,6 +8,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using Autodesk.Revit.DB.Events;
 #endregion
 
 
@@ -186,6 +187,8 @@ namespace RevitToRobotInterfacePlugin
                         // This means that an instance must be created, despite being useless and operated on
                         RevitToRobotCmd revitToRobotCmd = new RevitToRobotCmd();
                         EvilPrepareToExecution(ref revitToRobotCmd);
+
+                        // set various static options 
                         EvilTheCommonOptions_FromParams();
                         EvilTheSendOptions_FromParams();
                         EvilUpdateOptions_FromParams();
@@ -196,16 +199,28 @@ namespace RevitToRobotInterfacePlugin
                         // get the instance of the TheCommonOptions in use by Revit2Robot
                         clCommonOptions obj = (clCommonOptions)field.GetValue(null);
 
+                        // set the TheFilePath property to the SilentModeFileName i.e. "" 
                         field = typeInfo.GetField("TheFilePath", BindingFlags.Public | BindingFlags.Static);
                         field.SetValue(null, obj.SilentModeFileName);
 
                         // SendToRobot is the method underneath all others that actually does the sending to robot
                         SendToRobot s2r = new SendToRobot(false);
+
+                        // disable user interaction property of the revit journal, this prevents the popup that
+                        // follows the export that asks the user if they want to view the journal entries written
                         EvilTheRevitJournal_SetUserInteraction(false);
+
+                        // send to robot 
                         s2r.Execute(commandData, ref message, elements);
+
+                        // re-enable user interaction property of the revit journal 
                         EvilTheRevitJournal_SetUserInteraction(true);
+
+                        // re-activate the revit window, this prevents any switching to robot i.e. so it remains in the background 
                         EvilRevitAppActivate();
 
+                        // determine successfulness of operation
+                        // strictly cancelled result should not be possible given it is 'automated'
                         result = rexContext.Extension.Result != REXResultType.Cancelled ? (rexContext.Extension.Result != REXResultType.Failed ? Result.Succeeded : Result.Failed) : Result.Cancelled;
                     }
                     else
@@ -237,28 +252,53 @@ namespace RevitToRobotInterfacePlugin
 
             try
             {
-                // if the addin has been enabled (Add-ins -> External Tools -> Command RevitToRobotInterfacePlugin button pressed
-                // by the user in active revit session/document)
-                if (Command.Enabled)
+                // start transaction on active document
+                using (Transaction tx = new Transaction(doc))
                 {
-                    // start transaction on active document
-                    using (Transaction tx = new Transaction(doc))
+                    tx.Start("Posting command from Handler");
+
+                    // todo needs check that robot is running otherwise export will fail and the user will get a
+                    // dialog stating that there is an error and to contact the plugin provider (me!)
+                    // ...
+
+                    // create an instance of ExternalCommandData
+                    // system reflection is required as the constructor is declared as internal
+                    // ExternalCommandData provides the application and view so using system reflection it can be 'faked' from the provided sender arg of the handler
+                    ExternalCommandData exCommandData = 
+                        (ExternalCommandData)typeof(ExternalCommandData).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null).Invoke(null);
+
+                    // set the application field
+                    exCommandData.Application = uiapp;
+
+                    // set the view field
+                    if (args.GetType() == typeof(DocumentSavedEventArgs))
                     {
-                        tx.Start("Posting command from Handler");
-
-                        // todo needs check that robot is running otherwise export will fail and the user will get a
-                        // dialog stating that there is an error and to contact the plugin provider (me!)
-                        // ...
-
-                        // export to robot
-                        Result r = EvilExportToRobot(Command.CommandData, ref Command.Message, Command.Elements);
-
-                        // print the result to the debug output
-                        Debug.Print($"Result of MyExportToRobot is {r}");
-
-                        // complete the transaction
-                        tx.Commit();
+                        exCommandData.View = ((DocumentSavedAsEventArgs)args).Document.ActiveView;
                     }
+                    else if (args.GetType() == typeof(DocumentSavedAsEventArgs))
+                    {
+                        exCommandData.View = ((DocumentSavedAsEventArgs)args).Document.ActiveView;
+                    }
+                    else
+                    {
+                        Debug.Print($"error: Handler() Did not expect to be called with EventArgs subclass: {args.GetType()}.");
+                        exCommandData.View = null;
+                    }
+
+                    // create a message reference to provide (this is only used when there is an error)
+                    string message = "";
+
+                    // create an element set (this is only used when there is an error)
+                    ElementSet elementSet = new ElementSet();
+
+                    // export to robot
+                    Result r = EvilExportToRobot(exCommandData, ref message, elementSet);
+
+                    // print the result to the debug output
+                    Debug.Print($"Result of EvilExportToRobot is {r}");
+
+                    // complete the transaction
+                    tx.Commit();
                 }
             }
             // handle any other exception by printing to the debug console

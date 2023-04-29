@@ -67,11 +67,9 @@
       <HintPath>$(PROGRAMFILES)\Common Files\Autodesk Shared\Structural\SMX\2022\SMX.RST.dll</HintPath>
     </Reference>
     <Reference Include="System" />
-
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App.cs" />
-    <Compile Include="Command.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
