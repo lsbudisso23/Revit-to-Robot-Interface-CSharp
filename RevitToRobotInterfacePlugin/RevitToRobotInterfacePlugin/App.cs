@@ -9,12 +9,17 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using Autodesk.Revit.DB.Events;
+using System.Threading;
+using Autodesk.Revit.Attributes;
+using System.Security.Policy;
 #endregion
 
 
 namespace RevitToRobotInterfacePlugin
 {
-    internal class App : IExternalApplication
+    [Transaction(TransactionMode.ReadOnly)]
+
+    public class ThreadWork
     {
         // static flag dictating if the export to robot is enabled (makes the Handler do nothing)
         // this is preferable to registering and de-registering the handler constantly
@@ -25,6 +30,17 @@ namespace RevitToRobotInterfacePlugin
 
         // RevitToRobotCmd instance, required for pre-export steps
         private RevitToRobotCmd revitToRobotCmd = new RevitToRobotCmd();
+
+        private ExternalCommandData commandData = null;
+        private string message = null;
+        private ElementSet elements = null;
+
+        public ThreadWork(ExternalCommandData commandData, string message, ElementSet elements)
+        {
+            this.commandData = commandData;
+            this.message = message;
+            this.elements = elements;
+        }
 
         private void EvilRevitAppActivate()
         {
@@ -213,7 +229,7 @@ namespace RevitToRobotInterfacePlugin
                         // create an instance of clLog
                         // system reflection is required as the class is internal
                         Type TheLogTypeInfo = RevitToRobotCmdAssembly.GetType("REX.DRevit2Robot.clLog");
-                        
+
                         // set the TheLog property to the created instance of clLog (constructor is invoked)
                         field = Revit2RobotTypeInfo.GetField("TheLog", BindingFlags.Public | BindingFlags.Static);
                         field.SetValue(null, TheLogTypeInfo.GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, Type.EmptyTypes, null).Invoke(null));
@@ -256,9 +272,29 @@ namespace RevitToRobotInterfacePlugin
             return result;
         }
 
+        public void Target()
+        {
+            // export to robot
+            Result r = EvilExportToRobot(commandData, ref message, elements);
+
+            // print the result to the debug output
+            Debug.Print($"Result of EvilExportToRobot is {r}");
+
+            // Exception thrown: 'Autodesk.Revit.Proxy.Exceptions.InvalidOperationExceptionProxy' in APIUIAPI.dll
+            // Exception thrown: 'Autodesk.Revit.Exceptions.InvalidOperationException' in RevitAPIUI.dll
+            // Exception thrown: 'System.Reflection.TargetInvocationException' in mscorlib.dll
+            // Exception has been thrown by the target of an invocation.
+            // Result of EvilExportToRobot is Failed
+
+            // transactions (even read only) outside of the main thread do not appear possible
+        }
+
+    }
+    internal class App : IExternalApplication
+    {
         private void Handler(object sender, EventArgs args)
         {
-            if (IsEnabled)
+            if (ThreadWork.IsEnabled)
             {
                 // setup the top level objects in the Revit Platform API are application and document.
                 UIApplication uiapp = new UIApplication((Autodesk.Revit.ApplicationServices.Application)sender);
@@ -306,11 +342,10 @@ namespace RevitToRobotInterfacePlugin
                         foreach (Element elem in allElementsInView.ToElements())
                             elementSet.Insert(elem);
 
-                        // export to robot
-                        Result r = EvilExportToRobot(exCommandData, ref message, elementSet);
-
-                        // print the result to the debug output
-                        Debug.Print($"Result of EvilExportToRobot is {r}");
+                        // export to robot in a thread
+                        var threadWorker = new ThreadWork(exCommandData, message, elementSet);
+                        Thread thread = new Thread(threadWorker.Target);
+                        thread.Start();
 
                         // complete the transaction
                         tx.Commit();
