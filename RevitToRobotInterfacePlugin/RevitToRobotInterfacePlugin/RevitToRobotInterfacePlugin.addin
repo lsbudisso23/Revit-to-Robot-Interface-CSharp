@@ -1,6 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <RevitAddIns>
-  <AddIn Type="Application">
+	<!-- RevitToRobotInterfacePlugin External Application -->
+	<AddIn Type="Application">
     <Name>Application RevitToRobotInterfacePlugin</Name>
     <Assembly>RevitToRobotInterfacePlugin.dll</Assembly>
     <FullClassName>RevitToRobotInterfacePlugin.App</FullClassName>
@@ -8,4 +9,5 @@
     <VendorId>lsbudisso23</VendorId>
     <VendorDescription>https://github.com/lsbudisso23</VendorDescription>
   </AddIn>
+  <!-- CommandEnable and CommandDisable External Commands are not added to this plugin manifest, as they have custom UI controls -->
 </RevitAddIns>

@@ -16,13 +16,20 @@ namespace RevitToRobotInterfacePlugin
 {
     internal class App : IExternalApplication
     {
+        // static flag dictating if the export to robot is enabled (makes the Handler do nothing)
+        // this is preferable to registering and de-registering the handler constantly
+        public static bool IsEnabled { get; set; } = false;
+
         // to access the internal sealed classes, the assembly of one of the public classes (RevitToRobotCmd) is retrieved
-        private System.Reflection.Assembly Assem = typeof(RevitToRobotCmd).Assembly;
+        private readonly System.Reflection.Assembly RevitToRobotCmdAssembly = typeof(RevitToRobotCmd).Assembly;
+
+        // RevitToRobotCmd instance, required for pre-export steps
+        private RevitToRobotCmd revitToRobotCmd = new RevitToRobotCmd();
 
         private void EvilRevitAppActivate()
         {
             // get instance of internal sealed class RevitUtil via system reflection
-            Type typeInfo = Assem.GetType("REX.DRevit2Robot.RevitUtl");
+            Type typeInfo = RevitToRobotCmdAssembly.GetType("REX.DRevit2Robot.RevitUtl");
 
             // get and invoke method RevitAppActivate
             // null x2 as no object (static) and no parameters
@@ -33,7 +40,7 @@ namespace RevitToRobotInterfacePlugin
         private void EvilPrepareToExecution(ref RevitToRobotCmd revitToRobotCmd)
         {
             // get instance of internal sealed class RevitToRobotCmd via system reflection
-            Type typeInfo = Assem.GetType("REX.DRevit2Robot.RevitToRobotCmd");
+            Type typeInfo = RevitToRobotCmdAssembly.GetType("REX.DRevit2Robot.RevitToRobotCmd");
 
             // get and invoke method RevitAppActivate
             // null x2 as no object (static) and no parameters
@@ -43,7 +50,7 @@ namespace RevitToRobotInterfacePlugin
         private void EvilInitRevitContext()
         {
             // get instance of internal sealed class RevitToRobotCmd via system reflection
-            Type typeInfo = Assem.GetType("REX.DRevit2Robot.Revit2Robot");
+            Type typeInfo = RevitToRobotCmdAssembly.GetType("REX.DRevit2Robot.Revit2Robot");
 
             // get and invoke method RevitAppActivate
             // null x2 as no object (static) and no parameters
@@ -54,7 +61,7 @@ namespace RevitToRobotInterfacePlugin
         private void EvilTheCommonOptions_FromParams()
         {
             // get instance of internal sealed class RevitToRobotCmd via system reflection
-            Type typeInfo = Assem.GetType("REX.DRevit2Robot.Revit2Robot");
+            Type typeInfo = RevitToRobotCmdAssembly.GetType("REX.DRevit2Robot.Revit2Robot");
 
             // get the TheCommonOptions parameter of Revit2Robot class
             FieldInfo field = typeInfo.GetField("TheCommonOptions", BindingFlags.Public | BindingFlags.Static);
@@ -69,7 +76,7 @@ namespace RevitToRobotInterfacePlugin
         private void EvilTheSendOptions_FromParams()
         {
             // get instance of internal sealed class RevitToRobotCmd via system reflection
-            Type typeInfo = Assem.GetType("REX.DRevit2Robot.Revit2Robot");
+            Type typeInfo = RevitToRobotCmdAssembly.GetType("REX.DRevit2Robot.Revit2Robot");
 
             // get the TheSendOptions parameter of Revit2Robot class
             FieldInfo field = typeInfo.GetField("TheSendOptions", BindingFlags.Public | BindingFlags.Static);
@@ -84,7 +91,7 @@ namespace RevitToRobotInterfacePlugin
         private void EvilUpdateOptions_FromParams()
         {
             // get instance of internal sealed class RevitToRobotCmd via system reflection
-            Type typeInfo = Assem.GetType("REX.DRevit2Robot.Revit2Robot");
+            Type typeInfo = RevitToRobotCmdAssembly.GetType("REX.DRevit2Robot.Revit2Robot");
 
             // get the TheUpdateOptions parameter of Revit2Robot class
             FieldInfo field = typeInfo.GetField("TheUpdateOptions", BindingFlags.Public | BindingFlags.Static);
@@ -99,7 +106,7 @@ namespace RevitToRobotInterfacePlugin
         private void EvilTheRevitJournal_SetUserInteraction(bool status)
         {
             // get instance of internal sealed class RevitToRobotCmd via system reflection
-            Type typeInfo = Assem.GetType("REX.DRevit2Robot.Revit2Robot");
+            Type typeInfo = RevitToRobotCmdAssembly.GetType("REX.DRevit2Robot.Revit2Robot");
 
             // get the TheRevitJournal parameter of Revit2Robot class
             FieldInfo field = typeInfo.GetField("TheRevitJournal", BindingFlags.Public | BindingFlags.Static);
@@ -143,7 +150,7 @@ namespace RevitToRobotInterfacePlugin
                         // this is a violation of the Revit/Robot developer intentions, they are perfectly at liberty to change or remove internal classes between releases 
                         // this is an internal sealed class that is not meant to be publicly available
                         // this was achieved by using a .NET decompiler and System.Reflection
-                        Type typeInfo = Assem.GetType("REX.DRevit2Robot.Revit2Robot");
+                        Type Revit2RobotTypeInfo = RevitToRobotCmdAssembly.GetType("REX.DRevit2Robot.Revit2Robot");
 
                         REX.DRevit2Robot.REX.Common.Engine.Support.REXAssemblies rexAssem = new REX.DRevit2Robot.REX.Common.Engine.Support.REXAssemblies();
                         rexAssem.Initialize();
@@ -153,32 +160,32 @@ namespace RevitToRobotInterfacePlugin
                         EvilInitRevitContext();
 
                         // set the Revit2Robot class static variable m_resultMessage
-                        FieldInfo field = typeInfo.GetField("m_resultMessage", BindingFlags.Public | BindingFlags.Static);
+                        FieldInfo field = Revit2RobotTypeInfo.GetField("m_resultMessage", BindingFlags.Public | BindingFlags.Static);
                         field.SetValue(null, "");
 
                         // set the Revit2Robot class static variable m_result
-                        field = typeInfo.GetField("m_result", BindingFlags.Public | BindingFlags.Static);
+                        field = Revit2RobotTypeInfo.GetField("m_result", BindingFlags.Public | BindingFlags.Static);
                         field.SetValue(null, Result.Succeeded);
 
                         // set the Revit2Robot class static variable TheLogger
-                        field = typeInfo.GetField("TheLogger", BindingFlags.Public | BindingFlags.Static);
+                        field = Revit2RobotTypeInfo.GetField("TheLogger", BindingFlags.Public | BindingFlags.Static);
                         field.SetValue(null, new REXLogger());
 
                         // set the Revit2Robot class static variable TheCommonOptions
-                        field = typeInfo.GetField("TheCommonOptions", BindingFlags.Public | BindingFlags.Static);
+                        field = Revit2RobotTypeInfo.GetField("TheCommonOptions", BindingFlags.Public | BindingFlags.Static);
                         field.SetValue(null, new clCommonOptions());
 
                         // set the Revit2Robot class static variable TheSendOptions
-                        field = typeInfo.GetField("TheSendOptions", BindingFlags.Public | BindingFlags.Static);
+                        field = Revit2RobotTypeInfo.GetField("TheSendOptions", BindingFlags.Public | BindingFlags.Static);
                         field.SetValue(null, new clSendOptions());
 
                         // set the Revit2Robot class static variable TheUpdateOptions
-                        field = typeInfo.GetField("TheUpdateOptions", BindingFlags.Public | BindingFlags.Static);
+                        field = Revit2RobotTypeInfo.GetField("TheUpdateOptions", BindingFlags.Public | BindingFlags.Static);
                         field.SetValue(null, new clUpdateOptions());
 
                         // get and invoke SetRevitDocument
                         // null as no object (static), passing commandData
-                        MethodInfo method = Type.GetType(typeInfo.AssemblyQualifiedName).GetMethod("SetRevitDocument");
+                        MethodInfo method = Type.GetType(Revit2RobotTypeInfo.AssemblyQualifiedName).GetMethod("SetRevitDocument");
                         method.Invoke(null, new[] { commandData });
 
                         // EvilPrepareToExecution requres an instance to operate on as it is a non static method,
@@ -194,24 +201,31 @@ namespace RevitToRobotInterfacePlugin
                         EvilUpdateOptions_FromParams();
 
                         // get the TheCommonOptions parameter of Revit2Robot class
-                        field = typeInfo.GetField("TheCommonOptions", BindingFlags.Public | BindingFlags.Static);
+                        field = Revit2RobotTypeInfo.GetField("TheCommonOptions", BindingFlags.Public | BindingFlags.Static);
 
                         // get the instance of the TheCommonOptions in use by Revit2Robot
                         clCommonOptions obj = (clCommonOptions)field.GetValue(null);
 
-                        // set the TheFilePath property to the SilentModeFileName i.e. "" 
-                        field = typeInfo.GetField("TheFilePath", BindingFlags.Public | BindingFlags.Static);
+                        // set the TheFilePath property to the SilentModeFileName i.e. ""
+                        field = Revit2RobotTypeInfo.GetField("TheFilePath", BindingFlags.Public | BindingFlags.Static);
                         field.SetValue(null, obj.SilentModeFileName);
 
-                        // SendToRobot is the method underneath all others that actually does the sending to robot
-                        SendToRobot s2r = new SendToRobot(false);
+                        // create an instance of clLog
+                        // system reflection is required as the class is internal
+                        Type TheLogTypeInfo = RevitToRobotCmdAssembly.GetType("REX.DRevit2Robot.clLog");
+                        
+                        // set the TheLog property to the created instance of clLog (constructor is invoked)
+                        field = Revit2RobotTypeInfo.GetField("TheLog", BindingFlags.Public | BindingFlags.Static);
+                        field.SetValue(null, TheLogTypeInfo.GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, Type.EmptyTypes, null).Invoke(null));
 
                         // disable user interaction property of the revit journal, this prevents the popup that
                         // follows the export that asks the user if they want to view the journal entries written
                         EvilTheRevitJournal_SetUserInteraction(false);
 
-                        // send to robot 
-                        s2r.Execute(commandData, ref message, elements);
+                        // send to robot
+                        // the Revit2RobotExport method is used directly as opposed to SentToRobot as avoids the progress bar from being shown during export
+                        // if running with debug, this statement will throw a number of exceptios, though these are non-fatal
+                        Revit2RobotTypeInfo.GetMethod("Revit2RobotExport").Invoke(null, new[] { "" });
 
                         // re-enable user interaction property of the revit journal 
                         EvilTheRevitJournal_SetUserInteraction(true);
@@ -244,69 +258,101 @@ namespace RevitToRobotInterfacePlugin
 
         private void Handler(object sender, EventArgs args)
         {
-            // setup the top level objects in the Revit Platform API are application and document.
-            UIApplication uiapp = new UIApplication((Autodesk.Revit.ApplicationServices.Application)sender);
-            UIDocument uidoc = uiapp.ActiveUIDocument;
-            Autodesk.Revit.ApplicationServices.Application app = uiapp.Application;
-            Document doc = uidoc.Document;
-
-            try
+            if (IsEnabled)
             {
-                // start transaction on active document
-                using (Transaction tx = new Transaction(doc))
+                // setup the top level objects in the Revit Platform API are application and document.
+                UIApplication uiapp = new UIApplication((Autodesk.Revit.ApplicationServices.Application)sender);
+                UIDocument uidoc = uiapp.ActiveUIDocument;
+                Autodesk.Revit.ApplicationServices.Application app = uiapp.Application;
+                Document doc = uidoc.Document;
+
+                try
                 {
-                    tx.Start("Posting command from Handler");
-
-                    // todo needs check that robot is running otherwise export will fail and the user will get a
-                    // dialog stating that there is an error and to contact the plugin provider (me!)
-                    // ...
-
-                    // create an instance of ExternalCommandData
-                    // system reflection is required as the constructor is declared as internal
-                    // ExternalCommandData provides the application and view so using system reflection it can be 'faked' from the provided sender arg of the handler
-                    ExternalCommandData exCommandData = 
-                        (ExternalCommandData)typeof(ExternalCommandData).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null).Invoke(null);
-
-                    // set the application field
-                    exCommandData.Application = uiapp;
-
-                    // set the view field
-                    if (args.GetType() == typeof(DocumentSavedEventArgs))
+                    // start transaction on active document
+                    using (Transaction tx = new Transaction(doc))
                     {
-                        exCommandData.View = ((DocumentSavedAsEventArgs)args).Document.ActiveView;
+                        tx.Start("EvilExportToRobot from Handler");
+
+                        // create an instance of ExternalCommandData
+                        // system reflection is required as the constructor is declared as internal
+                        // ExternalCommandData provides the application and view so using system reflection it can be 'faked' from the provided sender arg of the handler
+                        ExternalCommandData exCommandData =
+                            (ExternalCommandData)typeof(ExternalCommandData).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null).Invoke(null);
+
+                        // set the application field
+                        exCommandData.Application = uiapp;
+
+                        // set the view field
+                        if (args.GetType() == typeof(DocumentSavedEventArgs))
+                        {
+                            exCommandData.View = ((DocumentSavedEventArgs)args).Document.ActiveView;
+                        }
+                        else if (args.GetType() == typeof(DocumentSavedAsEventArgs))
+                        {
+                            exCommandData.View = ((DocumentSavedAsEventArgs)args).Document.ActiveView;
+                        }
+                        else
+                        {
+                            Debug.Print($"error: Handler() Did not expect to be called with EventArgs subclass: {args.GetType()}.");
+                            exCommandData.View = null;
+                        }
+
+                        // create a message reference to provide (this is only used when there is an error)
+                        string message = "Handler() propogated error message";
+
+                        // create an element set, with all elements in view
+                        ElementSet elementSet = new ElementSet();
+                        FilteredElementCollector allElementsInView = new FilteredElementCollector(doc, doc.ActiveView.Id);
+                        foreach (Element elem in allElementsInView.ToElements())
+                            elementSet.Insert(elem);
+
+                        // export to robot
+                        Result r = EvilExportToRobot(exCommandData, ref message, elementSet);
+
+                        // print the result to the debug output
+                        Debug.Print($"Result of EvilExportToRobot is {r}");
+
+                        // complete the transaction
+                        tx.Commit();
                     }
-                    else if (args.GetType() == typeof(DocumentSavedAsEventArgs))
-                    {
-                        exCommandData.View = ((DocumentSavedAsEventArgs)args).Document.ActiveView;
-                    }
-                    else
-                    {
-                        Debug.Print($"error: Handler() Did not expect to be called with EventArgs subclass: {args.GetType()}.");
-                        exCommandData.View = null;
-                    }
-
-                    // create a message reference to provide (this is only used when there is an error)
-                    string message = "";
-
-                    // create an element set (this is only used when there is an error)
-                    ElementSet elementSet = new ElementSet();
-
-                    // export to robot
-                    Result r = EvilExportToRobot(exCommandData, ref message, elementSet);
-
-                    // print the result to the debug output
-                    Debug.Print($"Result of EvilExportToRobot is {r}");
-
-                    // complete the transaction
-                    tx.Commit();
+                }
+                // handle any other exception by printing to the debug console
+                catch (Exception ex)
+                {
+                    Debug.Print($"error: Handler() Unhandled/unexpected exception.");
+                    Debug.Print(ex.Message);
                 }
             }
-            // handle any other exception by printing to the debug console
-            catch (Exception ex)
-            {
-                Debug.Print($"error: Handler() Unhandled/unexpected exception.");
-                Debug.Print(ex.Message);
-            }
+        }
+
+        private void AddUIControls(UIControlledApplication uiControlledApp)
+        {
+            // Reflection to look for this assembly path
+            // this is required for constructing the button (presumably for it to know the method to call when pressed)
+            string thisAssemblyPath = Assembly.GetExecutingAssembly().Location;
+
+            // create ribbon panel in addins tab
+            RibbonPanel panel = uiControlledApp.CreateRibbonPanel("Export to Robot Structural Analysis on Save");
+
+            // add radio button group
+            RadioButtonGroupData radioData = new RadioButtonGroupData("radioGroup");
+            RadioButtonGroup radioButtonGroup = panel.AddItem(radioData) as RadioButtonGroup;
+
+            // create toggle buttons and add to radio button group
+            // disable is added first so it is the default
+            ToggleButtonData disableToggleButton =
+                new ToggleButtonData("disableToggleButton", "Disable", thisAssemblyPath, "RevitToRobotInterfacePlugin.CommandDisable")
+                {
+                    ToolTip = "Disable export to Robot Structural Analysis on document save."
+                };
+            radioButtonGroup.AddItem(disableToggleButton);
+
+            ToggleButtonData enableToggleButton =
+                new ToggleButtonData("enableToggleButton", "Enable", thisAssemblyPath, "RevitToRobotInterfacePlugin.CommandEnable")
+                {
+                    ToolTip = "Enable export to Robot Structural Analysis on document save."
+                };
+            radioButtonGroup.AddItem(enableToggleButton);
         }
 
         public Result OnStartup(UIControlledApplication uiControlledApp)
@@ -314,6 +360,9 @@ namespace RevitToRobotInterfacePlugin
             Result r = Result.Failed;
             try
             {
+                // add the controls (ribbon, buttons) to enable and disable the exporting to robot 
+                AddUIControls(uiControlledApp);
+
                 // register Handler for the DocumentSaved and DocumentSavedAs events
                 uiControlledApp.ControlledApplication.DocumentSaved += Handler;
                 uiControlledApp.ControlledApplication.DocumentSavedAs += Handler;
